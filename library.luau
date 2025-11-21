@@ -62,7 +62,7 @@ local Assets = {
 
 local getcustomasset = getcustomasset and function(Path)
     if not isfile(Path) then
-        writefile(Path, game:HttpGet(Path:gsub("moehook", "https://raw.githubusercontent.com/moehook/moehook.github.io/refs/heads/main/")))
+        writefile(Path, game:HttpGet(Path:gsub("moehook", "https://raw.githubusercontent.com/moehook/script/refs/heads/"..shared.moehook_beta and "beta/" or "main/")))
     end
 
     return readfile(Path)
@@ -1606,14 +1606,13 @@ function Library:ConfigManager(Window)
     local UISection = SettingsTab:Section("interface")
     local ConfigSection = SettingsTab:Section("configuration")
 
+    if not isfolder(`moehook/configs/{game.PlaceId}`) then
+        makefolder(`moehook/configs/{game.PlaceId}`)
+    end
 
     local ConfigFolder = `moehook/configs/{game.PlaceId}`
     local AutoloadPath = `moehook/configs/{game.PlaceId}/autoload.txt`
-
-    if not isfolder(ConfigFolder) then
-        makefolder(ConfigFolder)
-    end
-
+    
     local CurrentConfigName = ""
     local SelectedConfig = nil
     
@@ -1648,7 +1647,7 @@ function Library:ConfigManager(Window)
             end
         end
         writefile(`{ConfigFolder}/{Name}.json`, HttpService:JSONEncode(Data))
-        Library:Notify(`Config {Name} saved`, "Success")
+        Library:Notify(`saved config: {Name}`, "Success")
     end
 
     local function LoadConfig(Name)
@@ -1749,8 +1748,8 @@ function Library:ConfigManager(Window)
     ConfigSection:Button("set as autoload", function()
         if SelectedConfig and SelectedConfig ~= "None" then
             writefile(AutoloadPath, SelectedConfig)
-            AutoloadLabel:SetValue(`current autoload: {SelectedConfig}`)
-            Library:Notify(`Set {SelectedConfig} to autoload`, "Success")
+            AutoloadLabel:SetValue(`current autoload: <font color="#B48EAD">{SelectedConfig}</font>`)
+            Library:Notify(`Set autoload to: {SelectedConfig}`, "Success")
         else
             Library:Notify("Select a config first", "Error")
         end
@@ -1758,19 +1757,6 @@ function Library:ConfigManager(Window)
 
     --
 
-    UISection:Toggle("keep window inbounds", function(Value)
-        Library.KeepInBounds = Value
-    end, Library.KeepInBounds)
-
-    UISection:Toggle("watermark", function(Value)
-        WatermarkFrame.Visible = Value
-    end, true)
-
-    UISection:Toggle("keybind menu", function(Value)
-        -- ...
-    end, true)
-      
-    --
     if isfile(AutoloadPath) then
         local AutoName = readfile(AutoloadPath)
         if isfile(`{ConfigFolder}/{AutoName}.json`) then
