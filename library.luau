@@ -2,7 +2,7 @@ if shared.MoeLibrary then shared.MoeLibrary:Unload() end
 
 local StartTime; if shared.MoeDebug then
     StartTime = os.clock()
-end=
+end
 
 -- This library is heavily pasted from linoria
 
