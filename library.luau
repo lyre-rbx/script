@@ -67,7 +67,7 @@ local assetfunction = getcustomasset
 local getcustomasset = assetfunction and function(Path)
     if not isfile(Path) then
         task.spawn(function()
-             local Success, Data = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/moehook/script/refs/heads/beta/" .. Path) end)
+             local Success, Data = pcall(function() return game:HttpGet("https://github.com/moehook/script/raw/main/" .. Path) end)
              if Success and Data then writefile(Path, Data) end
         end)
         return Assets[Path] or ""
@@ -432,13 +432,18 @@ local SaturationFrame = New("TextButton", {
     Position = UDim2.fromOffset(8, 8),
     AutoButtonColor = false,
     Size = UDim2.fromOffset(156, 130),
-    BorderColor3 = Library.StrokeColor,
+    BorderSizePixel = 0,
     ZIndex = 4,
     BackgroundColor3 = Color3.new(1, 1, 1),
     Text = "",
     Parent = ColorpickerFrame
 })
-AddToRegistry(SaturationFrame, {BorderColor3 = "StrokeColor"})
+
+local SatFrameStroke = New("UIStroke", {
+    Color = Library.StrokeColor,
+    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    Parent = SaturationFrame
+})
 
 -- Gradient 1: Color to White
 local SatGradient = AddGradient(SaturationFrame, ColorSequence.new({
@@ -474,21 +479,26 @@ AddToRegistry(SaturationDragger, {BackgroundColor3 = "TextColor"})
 local HueSlider = New("TextButton", {
     Position = UDim2.fromOffset(8, 146),
     Size = UDim2.fromOffset(156, 20),
-    BorderColor3 = Library.StrokeColor,
+    BorderSizePixel = 0,
     AutoButtonColor = false,
     ZIndex = 4,
     BackgroundColor3 = Color3.new(1, 1, 1),
     Text = "",
     Parent = ColorpickerFrame
-})
-do
+}) do
     local SequenceTable = {}
     for Hue = 0, 1, .1 do
         table.insert(SequenceTable, ColorSequenceKeypoint.new(Hue, Color3.fromHSV(Hue, 1, 1)))
     end
     AddGradient(HueSlider, ColorSequence.new(SequenceTable))
 end
-AddToRegistry(HueSlider, {BorderColor3 = "StrokeColor"})
+
+local HueSliderStroke = SatFrameStroke:Clone()
+HueSliderStroke.Parent = HueSlider
+
+-- UIGradients influence the BorderColor3 too :c
+AddToRegistry(SatFrameStroke, {Color = "StrokeColor"})
+AddToRegistry(HueSliderStroke, {Color = "StrokeColor"})
 
 local HueLine = New("Frame", {
     BackgroundColor3 = Library.TextColor,
@@ -791,10 +801,13 @@ function Library:Window(Version)
         local RightSide = LeftSide:Clone() RightSide.Position = UDim2.new(0.5, 5, 0, 0) RightSide.Parent = TabComponents
         if not SelectedTab then SelectTab(TabButton) end
 
-        local TabFunctions = {}
+        local Tab = {
+            Name = Name
+        }
+
         local SectionCount = 0
 
-        function TabFunctions:Section(Name)
+        function Tab:Section(Name)
             SectionCount += 1
             local SectionFrame = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
@@ -826,9 +839,11 @@ function Library:Window(Version)
                 Parent = SectionFrame
             }) ApplyPadding(SectionComponents, {L=8, R=8, B=8, T=8}); New("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = SectionComponents})
 
-            local SectionFunctions = {}
+            local Section = {
+                Name = Name
+            }
 
-            function SectionFunctions:Label(Text)
+            function Section:Label(Text)
                 local TextLabel = New("TextLabel", {
                     AutomaticSize = Enum.AutomaticSize.Y,
                     BackgroundTransparency = 1,
@@ -843,13 +858,16 @@ function Library:Window(Version)
                     Parent = SectionComponents
                 })
                 AddToRegistry(TextLabel, {TextColor3 = "TextColor"})
-                local Label = {}
+
+                local Label = {
+                    Section = Section,
+                }
                 function Label:SetValue(Value) TextLabel.Text = Value; Label.Value = Value end
                 function Label:Tooltip(Text) AddTooltip(TextLabel, Text) end
                 return Label
             end
 
-            function SectionFunctions:Button(Name, Callback)
+            function Section:Button(Name, Callback)
                 local ButtonFrame = New("TextButton", {
                     BackgroundColor3 = Library.BackgroundColor,
                     BorderColor3 = Library.StrokeColor,
@@ -867,12 +885,14 @@ function Library:Window(Version)
                 ButtonFrame.MouseLeave:Connect(function() ButtonFrame.TextColor3 = Library.DeselectedColor; Library.Registry[ButtonFrame].TextColor3 = "DeselectedColor" end)
                 ButtonFrame.MouseButton1Up:Connect(function() ButtonFrame.TextColor3 = Library.TextColor; Library.Registry[ButtonFrame].TextColor3 = "TextColor" end)
                 ButtonFrame.MouseButton1Down:Connect(function() Callback(); ButtonFrame.TextColor3 = Library.DeselectedColor; Library.Registry[ButtonFrame].TextColor3 = "DeselectedColor" end)
-                local Button = {}
+                local Button = {
+                    Section = Section,
+                }
                 function Button:Tooltip(Text) AddTooltip(ButtonFrame, Text) end
                 return Button
             end
 
-            function SectionFunctions:Toggle(Name, Callback, Default)
+            function Section:Toggle(Name, Callback, Default)
                 local ToggleState = Default or false
                 local ToggleButton = New("TextButton", {
                     Size = UDim2.new(1, 0, 0, 20),
@@ -894,7 +914,7 @@ function Library:Window(Version)
                     Parent = ToggleButton
                 })
                 AddToRegistry(ToggleFrame, {BackgroundColor3 = "BackgroundColor", BorderColor3 = "StrokeColor"})
-                local Toggle = {Value = ToggleState, Type = "Toggle", Callback = Callback}
+                local Toggle = {Value = ToggleState, Type = "Toggle", Section = Section, Callback = Callback}
                 function Toggle:Tooltip(Text) AddTooltip(ToggleButton, Text) end
                 local function UpdateToggle(State)
                     ToggleButton.TextColor3 = State and Library.TextColor or Library.DeselectedColor
@@ -913,7 +933,7 @@ function Library:Window(Version)
                 return Toggle
             end
 
-            function SectionFunctions:Slider(Info)
+            function Section:Slider(Info)
                 Info.Min = Info.Min or 0
                 Info.Default = Info.Default or Info.Min
                 Info.Increment = Info.Increment or 1
@@ -965,7 +985,7 @@ function Library:Window(Version)
                     Parent = SliderButton
                 }) local SliderValueStroke = ApplyStroke(SliderValue, true)
                 AddToRegistry(SliderValue, {BackgroundColor3 = "DarkerAccentColor"})
-                local Slider = {Value = Info.Default, Min = Info.Min, Max = Info.Max, Type = "Slider", Callback = Info.Callback}
+                local Slider = {Value = Info.Default, Min = Info.Min, Max = Info.Max, Type = "Slider", Section = Section, Callback = Info.Callback}
                 function Slider:Tooltip(Text) AddTooltip(SliderButton, Text) end
                 local Last = nil
                 local function Round(Value) return DecimalPlaces == 0 and math.floor(Value) or tonumber(string.format('%.' .. DecimalPlaces .. 'f', Value)) end
@@ -1005,7 +1025,7 @@ function Library:Window(Version)
                 return Slider
             end
 
-            function SectionFunctions:Dropdown(Info)
+            function Section:Dropdown(Info)
                 Info.Default = Info.Default or ""
                 Info.Multi = type(Info.Default) == "table"
                 local DropdownLabel = New("TextLabel", {
@@ -1047,7 +1067,7 @@ function Library:Window(Version)
                     TextSize = 10,
                     Parent = DropdownButton
                 }) AddToRegistry(DropdownArrow, {TextColor3 = "DeselectedColor"})
-                local Dropdown = {Value = Info.Multi and {} or nil, Values = Info.Values, Type = "Dropdown", Button = DropdownButton, Callback = Info.Callback}
+                local Dropdown = {Value = Info.Multi and {} or nil, Values = Info.Values, Type = "Dropdown", Button = DropdownButton, Section = Section, Callback = Info.Callback}
                 function Dropdown:Tooltip(Text) AddTooltip(DropdownButton, Text) end
                 DropdownButton.MouseEnter:Connect(function() if not Dropdown.Open then DropdownButton.TextColor3 = Library.TextColor; Library.Registry[DropdownButton].TextColor3 = "TextColor" end end)
                 DropdownButton.MouseLeave:Connect(function() if not Dropdown.Open then DropdownButton.TextColor3 = Library.DeselectedColor; Library.Registry[DropdownButton].TextColor3 = "DeselectedColor" end end)
@@ -1129,7 +1149,7 @@ function Library:Window(Version)
                 return Dropdown
             end
 
-            function SectionFunctions:Keybind(Info)
+            function Section:Keybind(Info)
                 Info.Default = Info.Default or Enum.KeyCode.Unknown
                 Info.Mode = Info.Mode or "Toggle"
                 local KeybindLabel = New("TextLabel", {
@@ -1157,7 +1177,7 @@ function Library:Window(Version)
                 })
                 AddToRegistry(KeybindButton, {TextColor3 = "DeselectedColor"})
                 local Keybind = {
-                    Value = Info.Default, Mode = Info.Mode, Type = "Keybind",
+                    Value = Info.Default, Mode = Info.Mode, Type = "Keybind", Section = Section,
                     ContextMenuOpen = false, Listening = false, Active = false, Button = KeybindButton, Callback = Info.Callback, ChangedCallback = Info.ChangedCallback or function() end
                 }
                 function Keybind:Tooltip(Text) AddTooltip(KeybindLabel, Text) end
@@ -1187,7 +1207,7 @@ function Library:Window(Version)
                 return Keybind
             end
 
-            function SectionFunctions:Input(Info)
+            function Section:Input(Info)
                 Info.Placeholder = Info.Placeholder or "type something..."
                 Info.Default = Info.Default or ""
                 local InputLabel = New("TextLabel", {
@@ -1219,9 +1239,9 @@ function Library:Window(Version)
                     Parent = InputLabel
                 }) ApplyPadding(InputBox, {L=4, R=4})
                 AddToRegistry(InputBox, {BackgroundColor3 = "BackgroundColor", BorderColor3 = "StrokeColor", PlaceholderColor3 = "DeselectedColor", TextColor3 = "TextColor"})
-                local Input = {Value = Info.Default, Type = "Input", ChangedCallback = Info.ChangedCallback or function() end, Callback = Info.Callback}
+                local Input = {Value = Info.Default, Type = "Input", Section = Section, Callback = Info.Callback}
                 function Input:Tooltip(Text) AddTooltip(InputBox, Text) end
-                function Input:SetValue(Value) Input.Value = Value; InputBox.Text = Value; Input.ChangedCallback(Value) end
+                function Input:SetValue(Value) Input.Value = Value; InputBox.Text = Value; Input.Callback(Value) end
                 local LastInput = Info.Default
                 InputBox.Focused:Connect(function() InputBox.PlaceholderText = "" end)
                 InputBox.FocusLost:Connect(function()
@@ -1234,7 +1254,7 @@ function Library:Window(Version)
                 return Input
             end
 
-            function SectionFunctions:Colorpicker(Info)
+            function Section:Colorpicker(Info)
                 Info.Default = Info.Default or Color3.fromRGB(255, 0, 0)
                 
                 local ColorpickerLabel = New("TextLabel", {
@@ -1270,20 +1290,20 @@ function Library:Window(Version)
                     Callback = Info.Callback,
                     ActiveConnections = {},
                     Button = ColorButton,
+                    Section = Section,
                     ContextMenuOpen = false,
                     ContextConnects = {}
                 }
 
                 function Colorpicker:Tooltip(Text) AddTooltip(ColorButton, Text) end
 
-                local function UpdateColor(IgnoreValueCheck)
+                local function UpdateColor()
                     local NewColor = Color3.fromHSV(Colorpicker.Hue, Colorpicker.Sat, Colorpicker.Vib)
-                    local ValueChanged = NewColor ~= Colorpicker.Value
+                    local DidValueChange = NewColor ~= Colorpicker.Value
 
                     Colorpicker.Value = NewColor
                     ColorButton.BackgroundColor3 = NewColor
 
-                    -- Update Global Frame if open
                     if Library.OpenedFrames[ColorpickerFrame] == Colorpicker then
                         HueLine.Position = UDim2.fromScale(Colorpicker.Hue, 0)
 
@@ -1297,14 +1317,12 @@ function Library:Window(Version)
 
                         SaturationDragger.Position = UDim2.fromScale(1 - Colorpicker.Sat, 1 - Colorpicker.Vib)
 
-                        -- Ensure TextBoxes update cleanly
-                        -- Use IsFocused() check to allow typing without interference
                         if not RTextBox:IsFocused() then RTextBox.Text = tostring(math.floor(NewColor.R * 255)) end
                         if not GTextBox:IsFocused() then GTextBox.Text = tostring(math.floor(NewColor.G * 255)) end
                         if not BTextBox:IsFocused() then BTextBox.Text = tostring(math.floor(NewColor.B * 255)) end
                     end
 
-                    if (ValueChanged or IgnoreValueCheck) and Colorpicker.Callback then
+                    if DidValueChange then
                         Colorpicker.Callback(NewColor)
                     end
                 end
@@ -1312,7 +1330,7 @@ function Library:Window(Version)
                 function Colorpicker:SetValue(Color)
                     local H, S, V = Color:ToHSV()
                     Colorpicker.Hue, Colorpicker.Sat, Colorpicker.Vib = H, S, V
-                    UpdateColor(true) -- Force update
+                    UpdateColor()
                 end
 
                 function Colorpicker:Hide()
@@ -1336,12 +1354,11 @@ function Library:Window(Version)
                     ColorpickerFrame.Position = UDim2.fromOffset(Mouse.X + 8, Mouse.Y + 8)
                     ColorpickerFrame.Visible = true
                     
-                    -- Set Textboxes immediately on open
-                    RTextBox.Text = tostring(math.floor(Colorpicker.Value.R * 255))
-                    GTextBox.Text = tostring(math.floor(Colorpicker.Value.G * 255))
-                    BTextBox.Text = tostring(math.floor(Colorpicker.Value.B * 255))
+                    RTextBox.Text = tostring(math.round(Colorpicker.Value.R * 255))
+                    GTextBox.Text = tostring(math.round(Colorpicker.Value.G * 255))
+                    BTextBox.Text = tostring(math.round(Colorpicker.Value.B * 255))
 
-                    UpdateColor(true)
+                    UpdateColor()
 
                     table.insert(Colorpicker.ActiveConnections, SaturationFrame.InputBegan:Connect(function(Input)
                         if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
@@ -1370,9 +1387,7 @@ function Library:Window(Version)
                     end))
 
                     local function UpdateRGB()
-                        local R = math.clamp(tonumber(RTextBox.Text) or 0, 0, 255)
-                        local G = math.clamp(tonumber(GTextBox.Text) or 0, 0, 255)
-                        local B = math.clamp(tonumber(BTextBox.Text) or 0, 0, 255)
+                        local R, G, B = math.clamp(tonumber(RTextBox.Text) or 0, 0, 255), math.clamp(tonumber(GTextBox.Text) or 0, 0, 255), math.clamp(tonumber(BTextBox.Text) or 0, 0, 255)
                         Colorpicker:SetValue(Color3.fromRGB(R, G, B))
                     end
 
@@ -1443,9 +1458,9 @@ function Library:Window(Version)
                 return Colorpicker
             end
 
-            return SectionFunctions
+            return Section
         end
-        return TabFunctions
+        return Tab
     end
     return WindowFunctions
 end
@@ -1505,7 +1520,13 @@ function Library:ConfigManager(Window)
         if not Name or Name == "" or Name == "None" then Library:Notify("Invalid config name", "Error") return end
         local Data = {}
         for Idx, Option in next, Options do
-            if Idx ~= "configs" and Option.Value ~= nil then Data[Idx] = Option.Value end
+            if Option.Section.Name ~= "configuration" and Option.Value ~= nil then
+                if Option.Type == "Colorpicker" then
+                    Data[Idx] = {math.round(Option.Value.R * 255), math.round(Option.Value.G * 255), math.round(Option.Value.B * 255)}
+                else
+                    Data[Idx] = Option.Value
+                end
+            end
         end
         Data["WatermarkPosition"] = {WatermarkFrame.AbsolutePosition.X, WatermarkFrame.AbsolutePosition.Y}
         Data["WindowSize"] = {WindowFrame.AbsoluteSize.X, WindowFrame.AbsoluteSize.Y}
@@ -1520,8 +1541,11 @@ function Library:ConfigManager(Window)
         if not Success then Library:Notify("Failed to decode JSON", "Error") return end
         for Idx, Value in next, Decoded do
             local Option = Options[Idx]
-            if Option and Idx ~= "configs" then
-                if Option.SetState then Option:SetState(Value) elseif Option.SetValue then Option:SetValue(Value) end
+            if Option then
+                if Option.Type == "Colorpicker" then
+                    Option:SetValue(Color3.fromRGB(Value[1], Value[2], Value[3]))
+                elseif Option.SetState then Option:SetState(Value)
+                elseif Option.SetValue then Option:SetValue(Value) end
             end
         end
         WatermarkFrame.Position = UDim2.fromOffset(Decoded["WatermarkPosition"][1], Decoded["WatermarkPosition"][2])
