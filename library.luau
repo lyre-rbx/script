@@ -4,8 +4,6 @@ local StartTime; if shared.MoeDebug then
     StartTime = os.clock()
 end
 
--- This library is heavily pasted from linoria
-
 -- // Services
 local InputService = cloneref(game:GetService("UserInputService"))
 local TweenService = cloneref(game:GetService("TweenService"))
@@ -417,7 +415,200 @@ for _, Button in {HoldButton, ToggleButton, AlwaysButton} do
     end)
 end
 
--- // Colorpicker Frame (Global)
+-- // Keybind window
+local KeybindWindow = New("Frame", {
+    BackgroundColor3 = Library.BackgroundColor,
+    BorderColor3 = Library.StrokeColor,
+    Size = UDim2.fromOffset(150, 30),
+    Position = UDim2.fromOffset(8, 46),
+    Visible = false,
+    Parent = ScreenGui
+}); ApplyStroke(KeybindWindow)
+
+AddToRegistry(KeybindWindow, {
+    BackgroundColor3 = "BackgroundColor",
+    BorderColor3 = "StrokeColor"
+})
+
+local KeybindTitle = New("TextLabel", {
+    BackgroundColor3 = Library.MainColor,
+    BorderSizePixel = 0,
+    Size = UDim2.new(1, 0, 0, 30),
+    FontFace = Library.Font,
+    TextSize = 14,
+    TextColor3 = Library.TextColor,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Text = "keybinds",
+    Parent = KeybindWindow
+}); local KeybindTitleLine = AddLine(KeybindTitle); ApplyPadding(KeybindTitle, {L=8})
+
+KeybindTitleLine.Position = UDim2.new(0, -8, 1, -1)
+KeybindTitleLine.Size = UDim2.new(1, 8, 0, 1)
+
+AddToRegistry(KeybindTitle, {
+    BackgroundColor3 = "MainColor",
+    TextColor3 = "TextColor"
+})
+
+local KeybindsFrame = New("Frame", {
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(0, 30),
+    Size = UDim2.new(1, 0, 0, 0),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    Parent = KeybindWindow
+}); ApplyPadding(KeybindsFrame, {B=6,L=8,R=8,T=6}); New("UIListLayout", {
+    Padding = UDim.new(0, 4),
+    Parent = KeybindsFrame
+})
+
+local function GetTextWidth(Text, Size)
+    local TextLabel = New("TextLabel", {
+        FontFace = Library.Font,
+        TextSize = Size,
+        Text = Text,
+        Parent = ScreenGui
+    })
+    local Width = TextLabel.TextBounds.X
+    TextLabel:Destroy()
+    return Width
+end
+
+local function UpdateKeybindWindow()
+    for _, Child in KeybindsFrame:GetChildren() do
+        if Child:IsA("Frame") then
+            Child:Destroy()
+        end
+    end
+    
+    local IsMenuOpen = WindowFrame and WindowFrame.Visible
+    local Mode = Library.KeybindWindowMode or "active"
+    
+    if not IsMenuOpen and Mode == "hide" then
+        KeybindWindow.Visible = false
+        return
+    end
+    
+    local VisibleKeybinds = {}
+    local MaxKeyWidth = 0
+    local MaxWidth = GetTextWidth("keybinds", 14) + 16
+    
+    for _, Keybind in Library.Keybinds do
+        if not Keybind.ShowInKeybindWindow then continue end
+        
+        local IsActive = Keybind.Active or Keybind.Mode == "Always"
+        local HasValue = Keybind.Value and Keybind.Value ~= "?"
+        
+        local ShouldShow
+        if Mode == "hide" then
+            ShouldShow = false
+        elseif Mode == "active" then
+            ShouldShow = (IsMenuOpen and HasValue) or IsActive
+        elseif Mode == "all" then
+            ShouldShow = HasValue
+        else
+            ShouldShow = IsMenuOpen and HasValue
+        end
+        
+        if ShouldShow then
+            local KeyText = `[{Keybind.Value:lower()}]`
+            local KeyWidth = GetTextWidth(KeyText, 13)
+            if KeyWidth > MaxKeyWidth then
+                MaxKeyWidth = KeyWidth
+            end
+            table.insert(VisibleKeybinds, {
+                Keybind = Keybind,
+                IsActive = IsActive,
+                KeyText = KeyText
+            })
+        end
+    end
+    
+    for _, Data in VisibleKeybinds do
+        local Keybind = Data.Keybind
+        local IsActive = Data.IsActive
+        local KeyText = Data.KeyText
+        local IsDeselected = not IsActive
+
+        local NameText = Keybind.Name
+        local ModeText = Keybind.Mode:lower()
+        
+        local RowWidth = 16 + GetTextWidth(NameText, 13) + 8 + MaxKeyWidth + 6 + GetTextWidth(ModeText, 13)
+        if RowWidth > MaxWidth then MaxWidth = RowWidth end
+
+        local Label = New("Frame", {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 16),
+            Parent = KeybindsFrame
+        })
+        
+        local NameLabel = New("TextLabel", {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, -80, 1, 0),
+            FontFace = Library.Font,
+            TextSize = 13,
+            TextColor3 = IsDeselected and Library.DeselectedColor or Library.TextColor,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = NameText,
+            Parent = Label
+        })
+        
+        AddToRegistry(NameLabel, {
+            TextColor3 = IsDeselected and "DeselectedColor" or "TextColor"
+        })
+        
+        local KeyLabel = New("TextLabel", {
+            BackgroundTransparency = 1,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.fromScale(1, 0),
+            Size = UDim2.fromOffset(MaxKeyWidth, 16),
+            FontFace = Library.Font,
+            TextSize = 13,
+            TextColor3 = IsDeselected and Library.DeselectedColor or Library.AccentColor,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = KeyText,
+            Parent = Label
+        })
+        
+        AddToRegistry(KeyLabel, {
+            TextColor3 = IsDeselected and "DeselectedColor" or "AccentColor"
+        })
+        
+        local ModeLabel = New("TextLabel", {
+            BackgroundTransparency = 1,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -(MaxKeyWidth + 6), 0, 0),
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2.new(0, 0, 1, 0),
+            FontFace = Library.Font,
+            TextSize = 13,
+            TextColor3 = IsDeselected and Library.DeselectedColor or Library.TextColor,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = ModeText,
+            Parent = Label
+        })
+        
+        AddToRegistry(ModeLabel, {
+            TextColor3 = IsDeselected and "DeselectedColor" or "TextColor"
+        })
+    end
+    
+    local VisibleCount = #VisibleKeybinds
+    MaxWidth = math.max(MaxWidth, 120)
+    
+    if VisibleCount == 0 then
+        KeybindWindow.Visible = IsMenuOpen and Mode ~= "hide"
+        KeybindWindow.Size = UDim2.fromOffset(MaxWidth, 30)
+    else
+        KeybindWindow.Visible = true
+        local contentHeight = KeybindsFrame.AbsoluteSize.Y
+        if contentHeight <= 0 or contentHeight > 10000 then
+            contentHeight = (VisibleCount * 20) + 12
+        end
+        KeybindWindow.Size = UDim2.fromOffset(MaxWidth, 30 + contentHeight)
+    end
+end
+
+-- // Colorpicker Frame
 local ColorpickerFrame = New("Frame", {
     Size = UDim2.fromOffset(172, 200),
     BackgroundColor3 = Library.MainColor,
@@ -445,14 +636,12 @@ local SatFrameStroke = New("UIStroke", {
     Parent = SaturationFrame
 })
 
--- Gradient 1: Color to White
 local SatGradient = AddGradient(SaturationFrame, ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.new(1, 0, 0)),
     ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))
 }))
 SatGradient.Name = "SatGradient"
 
--- Gradient 2: Transparent to Black
 local BlackColor = New("Frame", {
     BackgroundColor3 = Library.Black,
     Size = UDim2.fromScale(1, 1),
@@ -496,7 +685,6 @@ end
 local HueSliderStroke = SatFrameStroke:Clone()
 HueSliderStroke.Parent = HueSlider
 
--- UIGradients influence the BorderColor3 too :c
 AddToRegistry(SatFrameStroke, {Color = "StrokeColor"})
 AddToRegistry(HueSliderStroke, {Color = "StrokeColor"})
 
@@ -539,7 +727,7 @@ for _, TextBox in next, {RTextBox, GTextBox, BTextBox} do
     AddToRegistry(TextBox, {BackgroundColor3 = "BackgroundColor", BorderColor3 = "StrokeColor"})
 end
 
--- // Colorpicker context menu (Global)
+-- // Colorpicker context menu
 local ColorpickerContextMenu = New("Frame", {
     Size = UDim2.fromOffset(54, 41),
     BackgroundColor3 = Library.MainColor,
@@ -618,6 +806,7 @@ Connect(InputService.InputBegan, function(Input, GameProcessed)
     for _, Keybind in Library.Keybinds do
         if Keybind.Listening then
             Keybind:SetValue(InputName)
+            UpdateKeybindWindow()
             return
         elseif not Keybind.Listening and Keybind.Value == InputName then
             if Keybind.Mode == "Hold" then
@@ -627,6 +816,7 @@ Connect(InputService.InputBegan, function(Input, GameProcessed)
                 Keybind.Active = not Keybind.Active
                 Keybind.Callback(Keybind.Active)
             end
+            UpdateKeybindWindow()
         end
     end
 end)
@@ -637,18 +827,10 @@ Connect(InputService.InputEnded, function(Input)
         if InputName == Keybind.Value and Keybind.Mode == "Hold" then
             Keybind.Active = false
             Keybind.Callback(false)
+            UpdateKeybindWindow()
         end
     end
 end)
-
-Connect(InputService.InputBegan, function(Input)
-    if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if Library.OpenedFrames[ColorpickerContextMenu] and not IsMouseOverFrame(ColorpickerContextMenu) and not IsMouseOverOpenedFrame() then
-            -- Context menu handled by object
-        end
-    end
-end)
-
 
 function Library:Window(Version)
     Library.Version = Version
@@ -661,6 +843,9 @@ function Library:Window(Version)
         Parent = ScreenGui
     }) ApplyStroke(WindowFrame); MakeDraggable(WindowFrame, nil, true)
     AddToRegistry(WindowFrame, {BackgroundColor3 = "BackgroundColor", BorderColor3 = "StrokeColor"})
+
+    MakeDraggable(KeybindWindow, WindowFrame)
+    WindowFrame:GetPropertyChangedSignal("Visible"):Connect(UpdateKeybindWindow)
 
     local ResizeButton = New("ImageButton", {
         AnchorPoint = Vector2.new(1, 1),
@@ -1152,6 +1337,8 @@ function Library:Window(Version)
             function Section:Keybind(Info)
                 Info.Default = Info.Default or Enum.KeyCode.Unknown
                 Info.Mode = Info.Mode or "Toggle"
+                Info.ShowInKeybindWindow = Info.ShowInKeybindWindow == nil and true
+                
                 local KeybindLabel = New("TextLabel", {
                     Size = UDim2.new(1, 0, 0, 20),
                     BackgroundTransparency = 1,
@@ -1177,8 +1364,18 @@ function Library:Window(Version)
                 })
                 AddToRegistry(KeybindButton, {TextColor3 = "DeselectedColor"})
                 local Keybind = {
-                    Value = Info.Default, Mode = Info.Mode, Type = "Keybind", Section = Section,
-                    ContextMenuOpen = false, Listening = false, Active = false, Button = KeybindButton, Callback = Info.Callback, ChangedCallback = Info.ChangedCallback or function() end
+                    Name = Info.Name,
+                    Value = Info.Default,
+                    Mode = Info.Mode,
+                    Type = "Keybind",
+                    Section = Section,
+                    ShowInKeybindWindow = Info.ShowInKeybindWindow,
+                    ContextMenuOpen = false,
+                    Listening = false,
+                    Active = false,
+                    Button = KeybindButton,
+                    Callback = Info.Callback,
+                    ChangedCallback = Info.ChangedCallback or function() end
                 }
                 function Keybind:Tooltip(Text) AddTooltip(KeybindLabel, Text) end
                 function Keybind:Show()
@@ -1195,14 +1392,20 @@ function Library:Window(Version)
                 function Keybind:SetValue(Value)
                     Keybind.Listening = false
                     if typeof(Value) == "EnumItem" then Value = InputMap[Value] or Value.Name:lower() end
+                    UpdateKeybindWindow()
                     Keybind.Value = Value; KeybindButton.Text = `[{Value}]`; Keybind.ChangedCallback(Value)
                 end
-                function Keybind:SetMode(Value) Keybind.Mode = Value end
+                function Keybind:SetMode(Value)
+                    Keybind.Mode = Value
+                    UpdateKeybindWindow()
+                end
                 KeybindButton.MouseButton1Down:Connect(function() if Keybind.Listening then return end; KeybindButton.Text = "[...]"; Keybind.Listening = true end)
                 KeybindButton.MouseButton2Down:Connect(function() Keybind:Show() end)
                 if Info.Mode == "Always" then Keybind.Active = true; Keybind.Callback(true) end
                 Keybind:SetValue(Keybind.Value)
+
                 table.insert(Library.Keybinds, Keybind)
+                UpdateKeybindWindow()
                 Options[GetIdx(Info.Name)] = Keybind
                 return Keybind
             end
@@ -1593,6 +1796,7 @@ function Library:ConfigManager(Window)
 
     local WindowKeybind = UISection:Keybind{
         Name = "window keybind", Default = Library.KeyCode, Mode = "Toggle",
+		ShowInKeybindWindow = false,
         Callback = function(Value)
             WindowFrame.Visible = Value
             if Library.OpenedFrames[DropdownFrame] then Library.OpenedFrames[DropdownFrame]:Hide()
@@ -1602,7 +1806,16 @@ function Library:ConfigManager(Window)
     WindowKeybind.Active = true
     UISection:Toggle("keep window inbounds", function(Value) Library.KeepInBounds = Value end, Library.KeepInBounds)
     UISection:Toggle("watermark", function(Value) WatermarkFrame.Visible = Value end, true)
-    UISection:Toggle("keybind window", function(Value) end)
+
+	UISection:Dropdown({
+		Name = "show keybinds when",
+		Values = {"active", "all", "hide"},
+		Default = "active",
+		Callback = function(Value)
+			Library.KeybindWindowMode = Value
+			UpdateKeybindWindow()
+		end
+	})
 
     ColorSection:Colorpicker{
         Name = "accent color",
