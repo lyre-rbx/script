@@ -362,7 +362,7 @@ end)
 
 PlayerSelfSection:Slider{
     Name = "walkspeed",
-    Default = 16,
+    Default = if LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed else 16,
     Max = 250,
     Callback = function(Value)
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
@@ -373,7 +373,7 @@ PlayerSelfSection:Slider{
 
 PlayerSelfSection:Slider{
     Name = "jump power",
-    Default = LocalPlayer.Character.Humanoid[LocalPlayer.Character.Humanoid.UseJumpPower and "JumpPower" or "JumpHeight"],
+    Default = if LocalPlayer.Character then LocalPlayer.Character.Humanoid[LocalPlayer.Character.Humanoid.UseJumpPower and "JumpPower" or "JumpHeight"] else 7.2,
     Max = 250,
     Callback = function(Value)
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
