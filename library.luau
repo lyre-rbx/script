@@ -64,7 +64,7 @@ local assetfunction = getcustomasset
 local getcustomasset = assetfunction and function(Path)
     if not isfile(Path) then
         task.spawn(function()
-             local Success, Data = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/moehook/script/beta/assets/" .. Path) end)
+             local Success, Data = pcall(game.HttpGet, game, Path:gsub("moehook", "https://raw.githubusercontent.com/moehook/script/beta/assets/"))
              if Success and Data then writefile(Path, Data) end
         end)
         return Assets[Path] or ""
