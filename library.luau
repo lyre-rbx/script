@@ -14,6 +14,7 @@ local Services = setmetatable({}, {
 -- // Services
 local InputService = Services.UserInputService
 local TweenService = Services.TweenService
+local TextService = Services.TextService
 local HttpService = Services.HttpService
 local RunService = Services.RunService
 local CoreGui = Services.CoreGui
@@ -31,7 +32,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 -- // Library
 local Library = {
     KeyCode = Enum.KeyCode.RightControl,
-    Registry = {},
+    Registry = setmetatable({}, __mode = "k"),
 
     KeepInBounds = true,
 
@@ -53,7 +54,7 @@ local Library = {
     ScreenGui = ScreenGui
 }
 
-for _, Folder in {"moehook", "moehook/configs", "moehook/assets"} do
+for _, Folder in next, {"moehook", "moehook/configs", "moehook/assets"} do
     if not isfolder(Folder) then
         makefolder(Folder)
     end
@@ -73,6 +74,7 @@ local getcustomasset = assetfunction and function(Path)
              local Success, Data = pcall(game.HttpGet, game, Path:gsub("moehook", "https://raw.githubusercontent.com/moehook/script/beta/assets/"))
              if Success and Data then writefile(Path, Data) end
         end)
+
         return Assets[Path] or ""
     end
     return assetfunction(Path)
@@ -81,10 +83,10 @@ end or function(Path)
 end
 
 function Library:Unload()
-    for _, Connection in Library.Connections do
+    for _, Connection in next, self.Connections do
         Connection:Disconnect()
     end
-    ScreenGui:Destroy()
+    self.ScreenGui:Destroy()
 end
 
 -- // Helper functions
@@ -189,6 +191,7 @@ local function AddLine(Object)
         Size = UDim2.new(1, 0, 0, 1),
         BackgroundColor3 = Library.StrokeColor,
         BorderSizePixel = 0,
+        ZIndex = Object.ZIndex + 1,
         Parent = Object
     })
     AddToRegistry(Line, {BackgroundColor3 = "StrokeColor"})
@@ -202,11 +205,11 @@ local function IsMouseOverFrame(Frame)
 end
 
 local function IsMouseOverOpenedFrame()
-    for Frame, _ in next, Library.OpenedFrames do
-        local Pos, Size = Frame.AbsolutePosition, Frame.AbsoluteSize
-        return Mouse.X >= Pos.X and Mouse.X <= Pos.X + Size.X
-        and Mouse.Y >= Pos.Y and Mouse.Y <= Pos.Y + Size.Y
+    for Frame in next, Library.OpenedFrames do
+        if IsMouseOverFrame(Frame) then return true end
     end
+
+    return false
 end
 
 local Tooltip = New("TextLabel", {
@@ -277,6 +280,7 @@ local WatermarkFrame = New("Frame", {
     BorderColor3 = Library.StrokeColor,
     Position = UDim2.fromOffset(8, 8),
     Size = UDim2.fromOffset(30, 30),
+    ZIndex = 6,
     Parent = ScreenGui
 }) ApplyStroke(WatermarkFrame)
 AddToRegistry(WatermarkFrame, {BackgroundColor3 = "BackgroundColor", BorderColor3 = "StrokeColor"})
@@ -287,6 +291,7 @@ local WatermarkIcon = New("ImageLabel", {
     Size = UDim2.fromOffset(20, 20),
     Image = getcustomasset("moehook/assets/logo.png"),
     ImageColor3 = Library.AccentColor,
+    ZIndex = 7,
     Parent = WatermarkFrame
 })
 AddToRegistry(WatermarkIcon, {ImageColor3 = "AccentColor"})
@@ -296,6 +301,7 @@ local WatermarkTextFrame = New("Frame", {
     BorderColor3 = Library.StrokeColor,
     Position = UDim2.new(1, 10, 0, 0),
     Size = UDim2.fromOffset(150, 30),
+    ZIndex = 7,
     Parent = WatermarkFrame
 })
 AddToRegistry(WatermarkTextFrame, {BackgroundColor3 = "BackgroundColor", BorderColor3 = "StrokeColor"})
@@ -315,6 +321,7 @@ local WatermarkText = New("TextLabel", {
     TextStrokeTransparency = .5,
     RichText = true,
     Text = `moehook v{Library.Version}`,
+    ZIndex = 8,
     Parent = WatermarkTextFrame
 })
 AddToRegistry(WatermarkText, {TextColor3 = "TextColor"})
@@ -387,14 +394,14 @@ AlwaysButton.Parent = KeyContextMenu
 
 local function UpdateContextButtons(Keybind)
     if not Keybind then return end
-    for _, Button in {HoldButton, ToggleButton, AlwaysButton} do
+    for _, Button in next, {HoldButton, ToggleButton, AlwaysButton} do
         local IsSelected = Keybind.Mode:lower() == Button.Text
         Button.TextColor3 = IsSelected and Library.AccentColor or Library.DeselectedColor
         Library.Registry[Button].TextColor3 = IsSelected and "AccentColor" or "DeselectedColor"
     end
 end
 
-for _, Button in {HoldButton, ToggleButton, AlwaysButton} do
+for _, Button in next, {HoldButton, ToggleButton, AlwaysButton} do
     AddToRegistry(Button, {TextColor3 = "DeselectedColor"})
     Button.MouseEnter:Connect(function()
         if Button.TextColor3 ~= Library.AccentColor then
@@ -426,6 +433,7 @@ local KeybindWindow = New("Frame", {
     Size = UDim2.fromOffset(150, 30),
     Position = UDim2.fromOffset(8, 46),
     Visible = false,
+    ZIndex = 3,
     Parent = ScreenGui
 }); ApplyStroke(KeybindWindow)
 
@@ -443,6 +451,7 @@ local KeybindTitle = New("TextLabel", {
     TextColor3 = Library.TextColor,
     TextXAlignment = Enum.TextXAlignment.Left,
     Text = "keybinds",
+    ZIndex = 4,
     Parent = KeybindWindow
 }); local KeybindTitleLine = AddLine(KeybindTitle); ApplyPadding(KeybindTitle, {L=8})
 
@@ -462,8 +471,11 @@ local KeybindsFrame = New("Frame", {
     Parent = KeybindWindow
 }); ApplyPadding(KeybindsFrame, {B=6,L=8,R=8,T=6}); New("UIListLayout", {
     Padding = UDim.new(0, 4),
+    ZIndex = 4,
     Parent = KeybindsFrame
 })
+
+
 
 local function GetTextWidth(Text, Size)
     local TextLabel = New("TextLabel", {
@@ -478,13 +490,14 @@ local function GetTextWidth(Text, Size)
 end
 
 local function UpdateKeybindWindow()
-    for _, Child in KeybindsFrame:GetChildren() do
+    -- TODO: rewrite
+    for _, Child in next, KeybindsFrame:GetChildren() do
         if Child:IsA("Frame") then
             Child:Destroy()
         end
     end
     
-    local IsMenuOpen = WindowFrame and WindowFrame.Visible
+    local IsMenuOpen = WindowFrame.Visible
     local Mode = Library.KeybindWindowMode or "active"
     
     if not IsMenuOpen and Mode == "hide" then
@@ -494,7 +507,7 @@ local function UpdateKeybindWindow()
     
     local VisibleKeybinds = {}
     local MaxKeyWidth = 0
-    local MaxWidth = GetTextWidth("keybinds", 14) + 16
+    local MaxWidth = 150
     
     for _, Keybind in Library.Keybinds do
         if not Keybind.ShowInKeybindWindow then continue end
@@ -504,13 +517,11 @@ local function UpdateKeybindWindow()
         
         local ShouldShow
         if Mode == "hide" then
-            ShouldShow = false
+            ShouldShow = IsMenuOpen and HasValue
         elseif Mode == "active" then
             ShouldShow = (IsMenuOpen and HasValue) or IsActive
         elseif Mode == "all" then
             ShouldShow = HasValue
-        else
-            ShouldShow = IsMenuOpen and HasValue
         end
         
         if ShouldShow then
@@ -527,7 +538,7 @@ local function UpdateKeybindWindow()
         end
     end
     
-    for _, Data in VisibleKeybinds do
+    for _, Data in next, VisibleKeybinds do
         local Keybind = Data.Keybind
         local IsActive = Data.IsActive
         local KeyText = Data.KeyText
@@ -553,6 +564,7 @@ local function UpdateKeybindWindow()
             TextColor3 = IsDeselected and Library.DeselectedColor or Library.TextColor,
             TextXAlignment = Enum.TextXAlignment.Left,
             Text = NameText,
+            ZIndex = 5,
             Parent = Label
         })
         
@@ -570,6 +582,7 @@ local function UpdateKeybindWindow()
             TextColor3 = IsDeselected and Library.DeselectedColor or Library.AccentColor,
             TextXAlignment = Enum.TextXAlignment.Left,
             Text = KeyText,
+            ZIndex = 6,
             Parent = Label
         })
         
@@ -588,6 +601,7 @@ local function UpdateKeybindWindow()
             TextColor3 = IsDeselected and Library.DeselectedColor or Library.TextColor,
             TextXAlignment = Enum.TextXAlignment.Left,
             Text = ModeText,
+            ZIndex = 6,
             Parent = Label
         })
         
@@ -597,18 +611,13 @@ local function UpdateKeybindWindow()
     end
     
     local VisibleCount = #VisibleKeybinds
-    MaxWidth = math.max(MaxWidth, 120)
     
     if VisibleCount == 0 then
-        KeybindWindow.Visible = IsMenuOpen and Mode ~= "hide"
+        KeybindWindow.Visible = IsMenuOpen
         KeybindWindow.Size = UDim2.fromOffset(MaxWidth, 30)
     else
         KeybindWindow.Visible = true
-        local contentHeight = KeybindsFrame.AbsoluteSize.Y
-        if contentHeight <= 0 or contentHeight > 10000 then
-            contentHeight = (VisibleCount * 20) + 12
-        end
-        KeybindWindow.Size = UDim2.fromOffset(MaxWidth, 30 + contentHeight)
+        KeybindWindow.Size = UDim2.fromOffset(MaxWidth, 30 + KeybindsFrame.AbsoluteSize.Y)
     end
 end
 
