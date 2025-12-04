@@ -1,5 +1,5 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/moehook/script/beta/library.luau"), "moehook library")()
-local Window = Library:Window("v1.0.0")
+local Window = Library:Window("v1.0.1")
 
 -- // Services
 local Players = cloneref(game:GetService("Players"))
