@@ -1,4 +1,4 @@
-local Library = shared.MoeLibrary
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/moehook/script/beta/library.luau"), "moehook library")()
 local Window = Library:Window("v1.0.0")
 
 -- // Services
