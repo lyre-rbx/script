@@ -1,13 +1,23 @@
 if shared.MoeLibrary then shared.MoeLibrary:Unload() end
 local StartTime = shared.MoeDebug and os.clock()
 
+--// Initialization
+local cloneref = cloneref or function(...) return ... end 
+local Services = setmetatable({}, {
+    __index = function(self, ServiceName)
+            local Service = cloneref(game.GetService(game, ServiceName))
+            self[ServiceName] = Service
+            return Service
+    end
+})
+
 -- // Services
-local InputService = cloneref(game:GetService("UserInputService"))
-local TweenService = cloneref(game:GetService("TweenService"))
-local HttpService = cloneref(game:GetService("HttpService"))
-local RunService = cloneref(game:GetService("RunService"))
-local CoreGui = cloneref(game:GetService("CoreGui"))
-local Players = cloneref(game:GetService("Players"))
+local InputService = Services.UserInputService
+local TweenService = Services.TweenService
+local HttpService = Services.HttpService
+local RunService = Services.RunService
+local CoreGui = Services.CoreGui
+local Players = Services.Players
 
 -- // Variables
 local PreRender = RunService.PreRender
@@ -17,7 +27,6 @@ local Options = {}
 -- // ScreenGui
 local ScreenGui = Instance.new("ScreenGui", CoreGui.RobloxGui)
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-ScreenGui.IgnoreGuiInset = true
 
 -- // Library
 local Library = {
@@ -103,8 +112,7 @@ end
 Library.DarkerAccentColor = ModifyBrightness(Library.AccentColor, -0.185)
 
 local function ColorText(Text, Color)
-    local R, G, B = math.floor(Color.R * 255), math.floor(Color.G * 255), math.floor(Color.B * 255)
-    return `<font color="rgb({R}, {G}, {B})">{Text}</font>`
+    return `<font color="#{Color:ToHex()}">{Text}</font>`
 end
 
 local function GetIdx(Name)
