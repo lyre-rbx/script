@@ -1,8 +1,6 @@
 if shared.MoeLibrary then shared.MoeLibrary:Unload() end
 
-local StartTime; if shared.MoeDebug then
-    StartTime = os.clock()
-end
+local StartTime = shared.MoeDebug and os.clock()
 
 -- // Services
 local InputService = cloneref(game:GetService("UserInputService"))
