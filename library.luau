@@ -1,5 +1,4 @@
 if shared.MoeLibrary then shared.MoeLibrary:Unload() end
-
 local StartTime = shared.MoeDebug and os.clock()
 
 -- // Services
@@ -7,6 +6,7 @@ local InputService = cloneref(game:GetService("UserInputService"))
 local TweenService = cloneref(game:GetService("TweenService"))
 local HttpService = cloneref(game:GetService("HttpService"))
 local RunService = cloneref(game:GetService("RunService"))
+local CoreGui = cloneref(game:GetService("CoreGui"))
 local Players = cloneref(game:GetService("Players"))
 
 -- // Variables
@@ -14,11 +14,10 @@ local PreRender = RunService.PreRender
 local Mouse = cloneref(Players.LocalPlayer:GetMouse())
 local Options = {}
 
-local WindowFrame
-
 -- // ScreenGui
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local ScreenGui = Instance.new("ScreenGui", CoreGui.RobloxGui)
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+ScreenGui.IgnoreGuiInset = true
 
 -- // Library
 local Library = {
