@@ -77,7 +77,7 @@ Section1:Keybind{
 Section2:Dropdown{
     Name = "non multi dropdown",
     Values = {"option1", "option2", "option3", "option4"},
-    Default = "option1", -- To make it multi-selectable, make this a table instead of a string. Defaults to ""
+    Default = "option1", -- To make the dropdown multi-selectable, make this a table instead of a string. Defaults to ""
     Callback = function(Option)
         print(`Option is now {Option}`)
     end
@@ -113,6 +113,8 @@ Section2:Button("biiig dropdown", function()
     }
 end)
 
+-- // Notification
+Library:Notify("Library example loaded what's up", "Success") -- "Info", "Success", "Warn", "Error". Defaults to "Info"
 -- // Settings tab
 Library:ConfigManager(Window)
 ```
