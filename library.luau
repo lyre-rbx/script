@@ -1,7 +1,7 @@
 if shared.MoeLibrary then shared.MoeLibrary:Unload() end
 local StartTime = shared.MoeDebug and os.clock()
 
---// Initialization
+--// Initialization 
 local cloneref = cloneref or function(...) return ... end 
 local Services = setmetatable({}, {
     __index = function(self, ServiceName)
