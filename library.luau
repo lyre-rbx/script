@@ -32,7 +32,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 -- // Library
 local Library = {
     KeyCode = Enum.KeyCode.RightControl,
-    Registry = setmetatable({}, __mode = "k"),
+    Registry = {},
 
     KeepInBounds = true,
 
