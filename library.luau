@@ -471,7 +471,6 @@ local KeybindsFrame = New("Frame", {
     Parent = KeybindWindow
 }); ApplyPadding(KeybindsFrame, {B=6,L=8,R=8,T=6}); New("UIListLayout", {
     Padding = UDim.new(0, 4),
-    ZIndex = 4,
     Parent = KeybindsFrame
 })
 
